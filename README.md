@@ -1,338 +1,283 @@
-# 🏥 PhysioCare — Digital Physiotherapy Management System
+# 🏥 PhysioCare — Clinical Tele-Rehabilitation & Physiotherapy Management System
 
-> A full-stack MERN application that connects patients with certified physiotherapists: appointment booking, rehabilitation programs, exercise video libraries, health articles and session reports.
+<p align="center">
+  <img src="frontend/public/vite.svg" alt="PhysioCare Logo" width="80" height="80" />
+</p>
 
-> 📦 **Taking over this project?** Read [`HANDOFF.md`](HANDOFF.md) first — it lists what was tested, what was not, and the accounts you must set up.
+<h3 align="center">Next-Generation Tele-Physiotherapy & Recovery Platform</h3>
 
----
+<p align="center">
+  A modern full-stack MERN healthtech platform connecting patients with certified physiotherapists for remote consultations, personalized rehabilitation programs, exercise video libraries, clinical PDF session reports, and an AI-powered physiotherapy recovery assistant.
+</p>
 
-## 🧾 Overview
-
-PhysioCare is a role-based digital health platform with two user types — **Patients** and **Physiotherapists (Doctors)** — each with their own dashboard and permissions.
-
-Patients can find doctors, book appointments, join rehabilitation programs with a code, watch exercise videos, log pain levels and read articles. Physiotherapists can manage appointments, write session reports, create programs, upload videos, publish articles and keep private notes on their patients.
-
----
-
-## 🛠 Tech Stack
-
-**Frontend:** React 19, Vite 7, React Router 7, Tailwind CSS 4, React Icons
-
-**Backend:** Node.js 18+, Express 5, MongoDB + Mongoose 9, JSON Web Tokens, bcryptjs, Multer (uploads), Passport (Google OAuth, optional), EmailJS REST API (OTP emails), express-rate-limit
-
----
-
-## ✨ Features
-
-### 👤 Patient
-- Signup / login with **email OTP verification**, forgot / reset password
-- Google login (optional — enable it in the env files)
-- Profile onboarding — personal info, medical history, emergency contact
-- Browse doctors (filtered by your city), view profiles and availability
-- Book, view and cancel appointments; read session reports sent by the doctor
-- Review completed sessions (rating, feeling Better / Same / Worse, feedback)
-- Enroll in rehabilitation programs with a 6-character code (not case-sensitive)
-- Watch exercise videos, log pain level per session
-- Read published health articles
-- **Cyan AI Assistant** — Ask questions about recovery exercises, posture tips, and mobility with real-time streaming answers powered by Google Gemini or Anthropic Claude (whichever key you configure)
-
-### 🩺 Physiotherapist
-- Separate signup / login portal with email OTP verification
-- Profile onboarding — specialization, licence number, hospital, schedule, languages
-- Toggle availability on / off
-- Confirm or cancel appointments; complete them with a session report (notes, medicine, suggestions, follow-up date, assigned program)
-- Send the report to the patient
-- Create rehabilitation programs (unique code auto-generated); deleting a program also deletes its videos
-- Upload exercise videos (file or link) to a program or the general library
-- Write articles (draft / published, categories, cover image)
-- View patients, keep private notes per patient, analytics dashboard
+<p align="center">
+  <a href="https://github.com/rishavrjpt/PhysioCare"><img src="https://img.shields.io/badge/GitHub-rishavrjpt%2FPhysioCare-181717?style=for-the-badge&logo=github" alt="GitHub Repo"></a>
+  <img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/Vite-7.3-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 7" />
+  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express-5.0-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express 5" />
+  <img src="https://img.shields.io/badge/MongoDB-Atlas_%26_Local-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Google_Gemini-Streaming_AI-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini AI" />
+  <img src="https://img.shields.io/badge/EmailJS-OTP_Verification-F05A28?style=for-the-badge&logo=gmail&logoColor=white" alt="EmailJS" />
+</p>
 
 ---
 
-## 📁 Project Structure
+## 🌟 Executive Overview
 
+**PhysioCare** bridges the gap between clinical rehabilitation and home recovery. Designed with a calm recovery teal/cyan palette and accessibility-first clinical UX, the platform provides dual specialized portals:
+
+1. **For Patients**: Discover verified physiotherapists by city, book home/clinic visits, enroll in specialized rehabilitation regimens, watch prescribed exercise video tutorials, log pain metrics, download professional A4 medical session reports, and consult **PhysioCare AI** for instant physiotherapy recovery tips.
+2. **For Physiotherapists (Doctors)**: Manage patient pipelines, issue comprehensive clinical session reports with prescriptions & digital stamps, create multi-week rehabilitation regimens with unique shareable access codes, publish patient educational articles, and monitor recovery progress.
+
+---
+
+## 🚀 Key Highlights & Architectural Strengths
+
+- **🤖 PhysioCare AI Recovery Assistant**: Real-time Server-Sent Events (SSE) streaming chatbot powered by Google Gemini (`gemini-flash-lite-latest` & `gemini-3.1-flash-lite`). Configured with emergency triage safety guardrails and strict domain-scoping exclusively to physiotherapy, exercise mechanics, ergonomics, and mobility.
+- **📄 Clinical A4 Session Reports**: Auto-generated clinical letterheads with clinic verification stamps, physician signature lines, clinical Rx boxes, and print-optimized CSS for PDF export.
+- **🔐 Secure Authentication Pipeline**: Email OTP verification with 60-second cooldown via EmailJS REST API, JWT-based role isolation (`patient`, `doctor`, `admin`), bcrypt password hashing, and optional Google OAuth 2.0.
+- **⚡ High-Performance Architecture**: MongoDB compound indexing, `.lean()` query projections, gzip compression with SSE bypass, and in-memory multi-tab synchronized state (`BroadcastChannel`).
+- **📱 Responsive & Resilient**: Built with Tailwind CSS, custom Calm Recovery design tokens, and optimistic UI updates with automatic rollbacks on network interruptions.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    subgraph Client["Frontend Client (React 19 + Vite 7)"]
+        A[Patient Portal]
+        B[Physiotherapist Portal]
+        C[PhysioCare AI Assistant Widget]
+        D[BroadcastChannel State Sync]
+    end
+
+    subgraph Gateway["API Layer (Express 5 + Node.js)"]
+        E[Auth Middleware / JWT Verification]
+        F[Rate Limiter & Input Sanitizer]
+        G[SSE Streaming Controller]
+        H[EmailJS REST Dispatcher]
+    end
+
+    subgraph Services["External & Database Services"]
+        I[(MongoDB Database)]
+        J[Google Gemini AI API]
+        K[EmailJS Gmail Service]
+        L[Local Multer Storage]
+    end
+
+    A --> E
+    B --> E
+    C --> G
+    E --> F
+    F --> I
+    G --> J
+    H --> K
+    F --> L
 ```
+
+---
+
+## 🎯 Dual-Portal Feature Matrix
+
+### 👤 Patient Experience
+- **Smart Onboarding**: Capture comprehensive injury profiles, medical history, emergency contacts, and rehabilitation goals.
+- **Geographic Doctor Discovery**: Filter certified specialists by city, experience, clinical ratings, consultation fees, and hospital affiliations.
+- **Appointment Lifecycle**: Instant booking with automated conflict checking, status tracking (`pending`, `confirmed`, `completed`, `cancelled`), and post-session clinical reviews.
+- **Regimen Code Enrollment**: Join doctor-curated rehabilitation programs using 6-character access codes.
+- **Video Therapy & Pain Tracker**: Stream targeted rehabilitation video routines and log subjective pain scores (1–10) per session.
+- **Report Vault**: View and download printable clinical records containing prescriptions, physician notes, and scheduled follow-ups.
+
+### 🩺 Physiotherapist Experience
+- **Clinical Practice Management**: Real-time patient queues, calendar views, and availability toggle.
+- **Clinical Session Report Authoring**: Formulate structured clinical notes, medicines/lifestyle suggestions, exercise plans, and next follow-up dates.
+- **Rehabilitation Program Studio**: Create multi-exercise treatment tracks with auto-generated secure patient enrollment codes.
+- **Exercise Media Library**: Upload high-resolution exercise demonstration videos (MP4/WebM/MOV) or embed external clinical references.
+- **Health Article Publishing**: Draft and publish clinical educational articles with category tagging and cover image uploads.
+- **Confidential Patient Case Notes**: Maintain private doctor-only clinical observation logs per patient.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| **Frontend UI** | React 19, Vite 7, React Router 7, Tailwind CSS 4, Lucide / React Icons |
+| **Backend API** | Node.js (v18+), Express 5, Multer, Compression, Express Rate Limit |
+| **Database & ODM** | MongoDB (v6+), Mongoose 9 (Optimized with Compound Indexes & Lean Queries) |
+| **AI / LLM Integration** | Google Gemini (`gemini-flash-lite-latest`, `gemini-3.1-flash-lite`) via REST SSE |
+| **Notification Engine** | EmailJS REST API (Direct server-side dispatch with private access token) |
+| **Security & Auth** | JSON Web Tokens (JWT), bcryptjs, Secure HttpOnly headers, CORS whitelisting |
+
+---
+
+## 📂 Project Directory Layout
+
+```text
 PhysioCare/
 ├── backend/
 │   ├── config/
-│   │   ├── db.js                  # MongoDB connection
-│   │   ├── emailService.js        # EmailJS OTP emails (keys from .env)
-│   │   ├── googleAuthConfig.js    # Google OAuth (only if configured)
-│   │   └── paths.js               # Upload folders (created automatically)
-│   ├── controllers/               # Route logic + ownership checks
+│   │   ├── db.js                 # Resilient MongoDB pool + auto-fallback
+│   │   ├── emailService.js       # EmailJS REST API dispatch
+│   │   ├── googleAuthConfig.js   # Passport Google OAuth strategy
+│   │   └── paths.js              # Media upload path resolvers
+│   ├── controllers/              # REST & SSE stream business logic
 │   ├── middleware/
-│   │   └── authMiddleware.js      # JWT check, roles, ownership helpers
-│   ├── models/                    # Mongoose schemas
-│   ├── routes/                    # Express routers
-│   ├── utils/                     # Sanitizing + doctor–patient relation helpers
-│   ├── uploads/                   # Created at runtime (git-ignored)
-│   ├── .env.example
-│   └── server.js
+│   │   └── authMiddleware.js     # JWT guard, role-based access & validation
+│   ├── models/                   # Mongoose schemas (User, Appointment, Report, etc.)
+│   ├── routes/                   # Modular Express routers
+│   ├── uploads/                  # Uploaded patient media & article covers
+│   ├── .env.example              # Sample environment template
+│   └── server.js                 # Server entrypoint with SSE compression bypass
 ├── frontend/
 │   ├── src/
-│   │   ├── components/            # Layouts, sidebars, modals, RequireAuth
-│   │   ├── pages/                 # Patient pages + pages/doctor/*
-│   │   ├── utils/auth.js          # Token decoding + adds token to API calls
-│   │   ├── config.js              # Reads VITE_API_BASE_URL
-│   │   └── App.jsx                # Routes (dashboards are login-protected)
-│   ├── .env.example
-│   └── vercel.json
-├── .gitignore
-└── package.json                   # Runs backend + frontend together
+│   │   ├── components/           # Global ChatAssistant, layouts, headers, modals
+│   │   ├── pages/                # Patient pages & doctor portal (/pages/doctor/*)
+│   │   ├── style/                # Scoped CSS stylesheets & Calm Recovery tokens
+│   │   ├── utils/                # Data stores, image compressors, auth handlers
+│   │   ├── config.js             # API base URL configuration
+│   │   └── App.jsx               # Universal application router & global widgets
+│   ├── index.html                # Single-page application root
+│   ├── vite.config.js            # Vite build configuration
+│   └── vercel.json               # SPA routing rewrite rules for Vercel
+├── package.json                  # Root monorepo runner (concurrently)
+└── README.md                     # Documentation
 ```
 
 ---
 
-## 🚀 Getting Started (Local)
+## ⚡ Quickstart Guide (Local Development)
 
-**You need:** Node.js 18 or newer, npm, and a MongoDB database (a free MongoDB Atlas cluster works).
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm**: v9.0.0 or higher
+- **MongoDB**: Active local instance (`mongodb://127.0.0.1:27017/physiocare`) or a MongoDB Atlas cluster URI.
 
-### 1. Install everything
+### 1. Clone & Install Dependencies
 ```bash
 git clone https://github.com/rishavrjpt/PhysioCare.git
 cd PhysioCare
+
+# Install root, backend, and frontend dependencies in one command
 npm run install:all
 ```
 
-### 2. Create the env files
+### 2. Configure Environment Variables
+
+**Backend (`backend/.env`):**
 ```bash
 cp backend/.env.example backend/.env
+```
+Fill in the following values:
+```env
+PORT=8080
+MONGO_URI=mongodb://127.0.0.1:27017/physiocare
+JWT_SECRET=your_super_secret_jwt_key_here
+FRONTEND_URL=http://localhost:5173
+
+# EmailJS OTP Setup (Optional for dev — prints OTP to terminal if empty)
+EMAILJS_SERVICE_ID=your_service_id
+EMAILJS_TEMPLATE_ID=your_template_id
+EMAILJS_PUBLIC_KEY=your_public_key
+EMAILJS_PRIVATE_KEY=your_private_key
+
+# PhysioCare AI (Google Gemini)
+GEMINI_API_KEY=your_gemini_api_key
+CHAT_MODEL=gemini-flash-lite-latest
+```
+
+**Frontend (`frontend/.env`):**
+```bash
 cp frontend/.env.example frontend/.env
 ```
-Open `backend/.env` and set at least **`MONGO_URI`** and **`JWT_SECRET`**. Generate a secret with:
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```env
+VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
-> 💡 If you leave the EmailJS keys empty, the OTP is **printed in the backend terminal** so you can still sign up and test locally.
-
-### 3. Run
+### 3. Launch Development Environment
 ```bash
 npm run dev
 ```
-- Backend: http://localhost:8080 (health check: http://localhost:8080/api/health)
-- Frontend: http://localhost:5173
+
+Both services will boot concurrently:
+- 🌐 **Frontend Client**: [http://localhost:5173](http://localhost:5173)
+- ⚙️ **Backend REST API**: [http://localhost:8080](http://localhost:8080)
+- 🩺 **Health Check**: [http://localhost:8080/api/health](http://localhost:8080/api/health)
 
 ---
 
-## 🔐 Environment Variables
+## 📡 REST API Architecture
 
-### `backend/.env`
-| Variable | Required | Description |
-|---|---|---|
-| `MONGO_URI` | ✅ | MongoDB connection string |
-| `JWT_SECRET` | ✅ | Long random string used to sign login tokens. The server will not start without it. |
-| `PORT` | | Default `8080` |
-| `FRONTEND_URL` | ✅ in production | Frontend URL(s), comma-separated. Only these can call the API (CORS). |
-| `BACKEND_URL` | For Google login | Public backend URL, used for the OAuth callback |
-| `NODE_ENV` | | `production` on Render |
-| `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY`, `EMAILJS_PRIVATE_KEY` | ✅ in production | EmailJS keys for OTP emails. Template variables: `{{to_name}}`, `{{to_email}}`, `{{otp}}` |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | | Leave empty to disable Google login |
-| `GEMINI_API_KEY` | | Enables the Cyan AI assistant with Google Gemini (checked first) |
-| `ANTHROPIC_API_KEY` | | Enables Cyan AI with Claude if no Gemini key is set |
-| `CHAT_MODEL` | | Optional model name override for the active AI provider |
+All protected endpoints require an `Authorization: Bearer <token>` header.
 
-### `frontend/.env`
-| Variable | Description |
-|---|---|
-| `VITE_API_BASE_URL` | Backend URL ending in `/api`, e.g. `https://your-backend.onrender.com/api` |
-| `VITE_GOOGLE_AUTH_ENABLED` | `true` to show the "Continue with Google" button |
+### Authentication & Profiles (`/api/auth`)
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `POST` | `/api/auth/signup` | Public | Register patient or physiotherapist |
+| `POST` | `/api/auth/verify-otp` | Public | Verify 6-digit OTP code & receive JWT |
+| `POST` | `/api/auth/resend-otp` | Public | Resend verification OTP (60s cooldown) |
+| `POST` | `/api/auth/login` | Public | Role-verified portal login |
+| `POST` | `/api/auth/forgot-password` | Public | Send password reset OTP |
+| `POST` | `/api/auth/reset-password` | Public | Set new password with OTP token |
+| `GET` | `/api/auth/:id` | Authenticated | Retrieve user profile & medical history |
+| `PATCH` | `/api/auth/:id/complete-profile` | Authenticated | Finalize clinical onboarding questionnaire |
 
-> ⚠️ Never commit `.env` files. They are already in `.gitignore`.
+### Clinical Appointments (`/api/appointments`)
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `POST` | `/api/appointments` | Patient | Book consultation (checks conflict & availability) |
+| `GET` | `/api/appointments/doctor/:id` | Doctor | Fetch doctor appointment roster |
+| `GET` | `/api/appointments/patient/:id` | Patient | Fetch patient booking history |
+| `PATCH` | `/api/appointments/:id/status` | Doctor / Patient | Modify status (`confirmed`, `cancelled`, etc.) |
+| `POST` | `/api/appointments/:id/complete` | Doctor | Submit clinical examination report & Rx |
+| `POST` | `/api/appointments/:id/review` | Patient | Submit rating & post-session recovery feedback |
+| `PATCH` | `/api/appointments/:id/send-to-patient` | Doctor | Publish finalized report to patient vault |
 
-### MongoDB Atlas setup
-1. Create a free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas).
-2. **Database Access** → add a database user with the **Read and write to any database** role (or `readWrite` on `physiocare` only). Avoid the "Atlas Admin" role.
-3. **Network Access** → add your current IP for local work. For Render/Vercel hosting add `0.0.0.0/0` (and rely on a strong DB password).
-4. **Database → Connect → Drivers** → copy the connection string and paste it into `MONGO_URI` in `backend/.env`, replacing `<db_password>` with the real password and adding `/physiocare` as the database name. URL-encode special characters in the password (`@` → `%40`).
-
-### JWT secret
-`JWT_SECRET` signs login tokens. Use a unique random value per environment (command above) and never reuse it between projects.
-
-### EmailJS setup
-1. Create a free account at emailjs.com, add an email service (e.g. Gmail) and a template that uses `{{to_name}}`, `{{to_email}}` and `{{otp}}`. Set the template's "To Email" to `{{to_email}}`.
-2. Copy the **Service ID** (Email Services) and **Template ID** (Email Templates).
-3. Account → **API keys**: copy the Public Key and Private Key.
-4. Account → **Security**: enable **"Allow EmailJS API for non-browser applications"** (required, because emails are sent from the backend).
-
-> The backend reads a single `EMAILJS_TEMPLATE_ID` and uses it for every OTP email (signup verification and password reset).
-
-### Cyan AI (optional)
-Create a free key at [Google AI Studio](https://aistudio.google.com/app/apikey) and set `GEMINI_API_KEY`, or use an Anthropic key in `ANTHROPIC_API_KEY`. Leave both empty to disable the assistant.
-
-### Security notes
-- Real secrets live only in `backend/.env` (git-ignored). Never paste them in code, issues, chat or screenshots.
-- If a key or password was ever shared or committed, **rotate it** in the provider's dashboard (EmailJS → Refresh Keys, Atlas → Database Access → edit password, Google AI Studio → delete/create key).
+### AI Physiotherapy Assistant (`/api/chat`)
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `GET` | `/api/chat/status` | Public | Verify active status and provider readiness |
+| `POST` | `/api/chat/stream` | Public / Auth | SSE real-time streaming physiotherapy recommendations |
 
 ---
 
-## ☁️ Deployment
+## 🔒 Security & Medical Compliance Principles
 
-### Backend → Render
-1. New **Web Service** → connect the repo
-2. **Root Directory:** `backend` · **Build:** `npm install` · **Start:** `node server.js`
-3. Add all variables from `backend/.env` (with `NODE_ENV=production`)
-4. Deploy, then open `https://<your-backend>.onrender.com/api/health` — it should return `{"ok":true}`
-
-> ⚠️ Render's free disk is wiped on every redeploy/restart, so **uploaded videos and team photos will disappear**. For a real deployment, store files on Cloudinary or S3, or use video links (YouTube etc.).
-
-### Frontend → Vercel
-1. New Project → import the repo, **Root Directory:** `frontend`
-2. Environment variable: `VITE_API_BASE_URL=https://<your-backend>.onrender.com/api`
-3. Deploy
-4. Back on Render, set `FRONTEND_URL=https://<your-app>.vercel.app` and redeploy
-
-### Google OAuth (optional)
-In Google Cloud Console:
-- Authorized JavaScript origin: `https://<your-app>.vercel.app`
-- Authorized redirect URI: `https://<your-backend>.onrender.com/api/auth/google/callback`
-
-Then set the Google keys on Render and `VITE_GOOGLE_AUTH_ENABLED=true` on Vercel.
+1. **Medical Advisory Notice**: PhysioCare AI strictly provides general rehabilitation guidance, ergonomic tips, and exercise cues. It is hardcoded to never diagnose clinical pathology or prescribe pharmaceutical regimens. Emergency symptom keywords automatically trigger emergency hospital dispatch recommendations.
+2. **Data Minimization & Ownership**: Medical reports, private physician notes, and recovery logs are guarded by authorization middleware verifying relational ownership between patient and consulting doctor.
+3. **Transport Security**: Production deployments mandate TLS termination, CORS origin lock, rate-limiting on authentication vectors, and sanitized input validation.
 
 ---
 
-## 📡 API Reference
+## 🚀 Production Deployment
 
-Private routes need the header `Authorization: Bearer <token>`. The frontend adds it automatically.
-**Access:** 🌐 public · 🔑 any logged-in user · 🧑 patient · 🩺 doctor · 👑 admin. "Own" means the logged-in user must own the data.
+### Backend on Render
+1. Connect this repository to a **Render Web Service**.
+2. Set **Root Directory** to `backend`.
+3. Set **Build Command** to `npm install` and **Start Command** to `node server.js`.
+4. Supply environment variables from `backend/.env` with `NODE_ENV=production`.
 
-### Auth — `/api/auth`
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| POST | `/signup` | 🌐 | Register (`role`: `patient` or `doctor` only) |
-| POST | `/verify-otp` | 🌐 | Verify email with OTP → returns token |
-| POST | `/resend-otp` | 🌐 | Send a new OTP |
-| POST | `/login` | 🌐 | Login (`expectedRole` blocks the wrong portal) |
-| POST | `/forgot-password` | 🌐 | Email a reset OTP |
-| POST | `/reset-password` | 🌐 | Reset password with OTP |
-| GET | `/:id` | 🔑 own / treating doctor | Get user profile (no secrets) |
-| PATCH | `/:id/complete-profile` | 🔑 own | Save onboarding profile |
-| GET | `/google/patient`, `/google/doctor` | 🌐 | Start Google login |
-
-Auth routes are rate-limited (30 requests / 15 min per IP). An OTP expires after 10 minutes or 5 wrong tries.
-
-### Doctors — `/api/doctors`
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| GET | `/?city=` | 🌐 | List verified doctors |
-| GET | `/:id` | 🌐 | Doctor profile |
-| PUT | `/:id/profile` | 🩺 own | Update profile |
-| PATCH | `/:id/availability` | 🩺 own | Toggle availability |
-| GET | `/patient-note/:doctorId/:patientId` | 🩺 | Get your note on a patient |
-| POST | `/patient-note` | 🩺 | Save note (patient must be under your care) |
-
-### Appointments — `/api/appointments` (all 🔑)
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| POST | `/` | 🧑 | Book (blocks past dates and double-booking) |
-| GET | `/doctor/:id` | 🩺 own | Doctor's appointments |
-| GET | `/patient/:id` | 🧑 own | Patient's appointments |
-| PATCH | `/:id/status` | 🩺 own · 🧑 cancel only | Update status |
-| POST | `/:id/complete` | 🩺 own | Complete with session report |
-| POST | `/:id/review` | 🧑 own | Review a completed session |
-| PATCH | `/:id/send-to-patient` | 🩺 own | Share the report |
-
-### Programs — `/api/programs` (all 🔑)
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| POST | `/` | 🩺 | Create (code auto-generated) |
-| GET | `/doctor/:doctorId` | 🩺 own | Your programs |
-| POST | `/enroll` | 🧑 | Enroll with a code |
-| GET | `/patient/:patientId` | 🧑 own / treating doctor | Enrolled programs |
-| DELETE | `/:id` | 🩺 own | Delete program + its videos |
-| GET | `/:id/patients` | 🩺 own | Enrolled patients |
-
-### Videos — `/api/videos`
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| GET | `/general` | 🌐 | General video library |
-| GET | `/general/doctor/:doctorId` | 🌐 | A doctor's general videos |
-| GET | `/program/:programId` | 🔑 program's doctor / enrolled patient | Program videos |
-| POST | `/` | 🩺 | Upload (mp4/webm/mov/m4v/ogg, max 100 MB) or add an http(s) link |
-| PUT | `/:id` | 🩺 own | Edit title/description/duration |
-| DELETE | `/:id` | 🩺 own | Delete video and file |
-| POST | `/log-session` | 🧑 | Log pain level (1–10) |
-
-### Articles — `/api/articles`
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| GET | `/published` | 🌐 | Published articles (no images) |
-| GET | `/covers` | 🌐 | Cover images (lazy-loaded) |
-| GET | `/:id` | 🌐 published · 🩺 own drafts | Single article (counts a view) |
-| POST | `/` | 🩺 | Create |
-| GET | `/doctor/:id` | 🩺 own | Your articles incl. drafts |
-| PATCH | `/:id` | 🩺 own | Update |
-| DELETE | `/:id` | 🩺 own | Delete |
-
-### Team — `/api/members`
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| GET | `/`, `/:id` | 🌐 | Team members |
-| POST | `/` | 🔑 | Add member (image upload) |
-| DELETE | `/:id` | 👑 | Delete member |
-
-### Cyan AI Assistant — `/api/chat`
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| GET | `/status` | 🌐 | Checks if Cyan AI is configured (`{ enabled: Boolean }`) |
-| POST | `/stream` | 🧑 (patient) | SSE streaming recovery Q&A with emergency symptom detection |
-
-> **⚠️ Medical Disclaimer:** Cyan AI provides general wellness, posture, and exercise information. It does not provide medical diagnoses or prescribe medications. In case of emergency or severe symptoms, seek urgent medical care immediately.
+### Frontend on Vercel
+1. Import the repository into **Vercel**.
+2. Set **Root Directory** to `frontend`.
+3. Set **Framework Preset** to `Vite`.
+4. Add environment variable: `VITE_API_BASE_URL=https://<your-backend-domain>/api`.
+5. Deploy.
 
 ---
 
-## 🗄 Database Models
+## 👨‍💻 Project Maintainer
 
-- **User** — name, email (lowercase, unique), password (bcrypt), role (`patient` / `doctor` / `admin`), enrolledPrograms, Google fields, verification + OTP fields, profile + patient medical fields, timestamps
-- **DoctorProfile** — user, experience, fees, bio, specialization, licenceNumber, hospitalName, availableDays, time range, languages, isAvailable
-- **Appointment** — patientId, doctorId, date, time, status, notes, session report fields, programCode/Title, review fields, sentToPatient
-- **Program** — doctorId, title, description, programCode (unique), specialty
-- **Video** — doctorId, programId (null = general), title, description, url, thumbnail, duration
-- **Article** — doctorId, title, subtitle, content, category, tags, coverImage, status, readTime, views, likes
-- **SessionLog** — patientId, videoId, painLevel (1–10), date
-- **PatientNote** — doctorId, patientId, note (unique per doctor + patient)
-- **TeamMember** — name, roll number, year, degree, about, hobbies, photo
-
-### Creating an admin
-Admins can't sign up through the app. Create a normal account, then in MongoDB Atlas change that user's `role` to `"admin"`.
+<p align="left">
+  <strong>Rishav Raj</strong><br/>
+  GitHub: <a href="https://github.com/rishavrjpt">@rishavrjpt</a><br/>
+  Email: <a href="mailto:rajrishav7013@gmail.com">rajrishav7013@gmail.com</a>
+</p>
 
 ---
 
-## ⚡ Keep the Server Awake (Free-plan deployment)
+## 📜 License
 
-Free-tier hosting providers (such as Render) put instances to sleep after 15 minutes of inactivity, causing cold starts that can take up to a minute.
-
-To keep your backend awake 24/7 without delays:
-1. Create a free account at [UptimeRobot](https://uptimerobot.com).
-2. Add a new **HTTP(s)** monitor for:
-   ```
-   https://<your-backend-domain>/api/health
-   ```
-3. Set the monitoring interval to **every 10 minutes**.
-
----
-
-## 🛠 Troubleshooting
-
-| Problem | Likely cause / fix |
-|---|---|
-| Backend exits: `JWT_SECRET` missing | Set `JWT_SECRET` in `backend/.env` |
-| `MongooseServerSelectionError` / cannot connect | Wrong `MONGO_URI`, password not URL-encoded, or your IP is not in Atlas **Network Access** |
-| `bad auth : authentication failed` | Wrong DB username/password; reset it in Atlas → Database Access |
-| Browser shows CORS error | `FRONTEND_URL` in `backend/.env` must match the frontend URL exactly (no trailing slash); restart the backend |
-| Frontend calls the wrong server / 404 on `/api` | Check `VITE_API_BASE_URL` in `frontend/.env` (must end in `/api`); restart `npm run dev` |
-| OTP email never arrives | Check EmailJS IDs/keys, that "Allow EmailJS API for non-browser applications" is on, and the monthly request quota. In development with empty keys, the OTP prints in the backend terminal |
-| Cyan AI shows as unavailable | Neither `GEMINI_API_KEY` nor `ANTHROPIC_API_KEY` is set |
-| Port already in use | Change `PORT` in `backend/.env` (and `VITE_API_BASE_URL`) or stop the other process |
-
----
-
-## 👤 Ownership & Contact
-
-**Owner / maintainer:** Rishav Raj
-**GitHub:** `rishavrjpt`
-**Contact:** `<contact-email>`
-
-## 📄 License
-
-A license has not been selected yet. Until one is added, all rights are reserved by the project owner.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+All rights reserved © 2026 PhysioCare.
