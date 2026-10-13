@@ -135,8 +135,10 @@ There is **no automated test suite** in this repository.
 
 ## 6. Deployment summary (Render + Vercel + Atlas)
 
-1. **Render (backend)**: Web Service, Root Directory `backend`, Build `npm install`, Start `node server.js`.
-   Set `NODE_ENV=production`, `MONGO_URI`, `JWT_SECRET`, EmailJS keys, optional AI keys, `FRONTEND_URL`.
+1. **Render (backend)**: deploy via the root `render.yaml` Blueprint (Root Directory `backend`, Build `npm install`, Start `npm start`, health check `/api/health`).
+   Set `MONGO_URI`, `JWT_SECRET`, EmailJS keys, optional AI keys, `FRONTEND_URL` and `BACKEND_URL` in the Render dashboard (`NODE_ENV=production` is set by the Blueprint).
+   `MONGO_URI` format (enter the real password only in Render, URL-encoding special characters, e.g. `@` → `%40`):
+   `mongodb+srv://rishavraj2107_db_user:<NEW_PASSWORD>@cluster0.bajklbk.mongodb.net/physiocare?retryWrites=true&w=majority`
 2. **Vercel (frontend)**: Root Directory `frontend`, set `VITE_API_BASE_URL=https://<render-service>.onrender.com/api`.
 3. Put the Vercel URL into Render's `FRONTEND_URL`, redeploy, then check `/api/health`.
 
