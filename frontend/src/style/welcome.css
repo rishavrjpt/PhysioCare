@@ -1,0 +1,171 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
+}
+
+/* FULL SCREEN GRADIENT BACKGROUND */
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary-50));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* CENTER CONTAINER */
+.home-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+/* GLASS EFFECT CARD */
+.card {
+  width: 95%;
+  max-width: 1150px;
+  display: flex;
+  border-radius: 30px;
+  overflow: hidden;
+
+  /* Glass effect */
+  background: var(--primary-50);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+
+  transition: all 0.4s ease;
+}
+
+/* HOVER LIFT EFFECT */
+.card:hover {
+  transform: translateY(-12px) scale(1.01);
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.6);
+}
+
+/* LEFT SIDE */
+.left {
+  width: 50%;
+  position: relative;
+  overflow: hidden;
+  background: var(--primary-900);
+}
+
+.left img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.left img:hover {
+  transform: scale(1.04);
+}
+
+/* Text overlay at the bottom of the image */
+.left-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 32px 40px;
+  background: linear-gradient(to top, rgba(19, 78, 74, 0.82) 0%, transparent 100%);
+}
+
+.left h2 {
+  font-size: 26px;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+.left span {
+  background: linear-gradient(90deg, var(--primary-400), var(--primary-300));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: bold;
+}
+
+.left p {
+  color: rgba(255,255,255,0.85);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* RIGHT SIDE */
+.right {
+  width: 50%;
+  padding: 70px 60px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.right h4 {
+  color: var(--primary-hover);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.right h1 {
+  font-size: 44px;
+  margin-bottom: 20px;
+  color: #111;
+}
+
+.right h1 span {
+  background: linear-gradient(90deg, var(--primary-hover), var(--primary-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.right p {
+  color: #555;
+  margin-bottom: 35px;
+  line-height: 1.6;
+}
+
+/* BUTTONS */
+.btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 40px;
+  font-size: 16px;
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+/* PRIMARY BUTTON */
+.primary {
+  background: linear-gradient(90deg, var(--primary), var(--primary-500));
+  color: white;
+  border: none;
+  box-shadow: 0 8px 25px rgba(15, 118, 110, 0.4);
+}
+
+.primary:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 35px rgba(15, 118, 110, 0.6);
+}
+
+/* OUTLINE BUTTON */
+.outline {
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.outline:hover {
+  background: linear-gradient(90deg, var(--primary), var(--primary-500));
+  color: white;
+  border: none;
+  transform: translateY(-4px);
+}

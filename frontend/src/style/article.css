@@ -1,0 +1,125 @@
+.articles-page{
+width:100%;
+}
+
+.articles-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+.articles-title{
+font-size:36px;
+margin-bottom:5px;
+}
+
+.articles-subtitle{
+color:#6b7280;
+}
+
+.search-bar{
+padding:12px 20px;
+border-radius:25px;
+border:1px solid #ddd;
+width:260px;
+}
+
+.articles-filters{
+display:flex;
+gap:10px;
+margin:20px 0;
+}
+
+.articles-filters button{
+padding:8px 18px;
+border:none;
+border-radius:20px;
+background:#e8ecf6;
+cursor:pointer;
+}
+
+.articles-filters .active{
+background:var(--primary);
+color:white;
+}
+
+.articles-grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:25px;
+}
+
+.article-card{
+background:white;
+border-radius:18px;
+overflow:hidden;
+box-shadow:0 10px 25px rgba(0,0,0,0.05);
+}
+
+.article-card img{
+width:100%;
+height:180px;
+object-fit:cover;
+}
+
+.article-content{
+padding:18px;
+}
+
+.article-content h3{
+margin:10px 0;
+font-size:18px;
+}
+
+.article-content p{
+color:#6b7280;
+font-size:14px;
+}
+
+.article-footer{
+display:flex;
+justify-content:space-between;
+margin-top:15px;
+font-size:14px;
+}
+
+.article-footer a{
+color:var(--primary);
+cursor:pointer;
+}
+
+.tag{
+font-size:11px;
+padding:4px 10px;
+border-radius:8px;
+color:white;
+}
+
+.health{
+background:#4f8df7;
+}
+
+.recovery{
+background:#5bc0de;
+}
+
+.training{
+background:#34c38f;
+}
+
+.mobility{
+background:#17a2b8;
+}
+
+.active{
+    color: #000;
+}
+
+
+.articles-title{
+    color: #000;
+}
+.mainheading{
+    color: #000;
+}

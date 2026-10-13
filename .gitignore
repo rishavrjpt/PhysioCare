@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit these
+.env
+.env.*
+!.env.example
+client_secret_*.json
+
+# Build output
+dist/
+
+# Uploaded files (created automatically at runtime)
+backend/uploads/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Private files that must never be uploaded (credential screenshots, env backups)
+Screenshot*.png
+Screen Shot*.png
+*.env.backup*
+.env.backup*
+*.pem
+*.key
+
+# Local tool folders
+.qodo/
+.claude/

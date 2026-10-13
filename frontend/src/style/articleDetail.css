@@ -1,0 +1,131 @@
+.article-detail-layout {
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 16px 40px;
+}
+
+/* MAIN ARTICLE */
+
+.article-main {
+    background: white;
+    padding: 40px 48px;
+    border-radius: 20px;
+    color: #000;
+    width: 100%;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.back{
+color:#000;
+margin-bottom:10px;
+cursor:pointer;
+}
+
+.article-category{
+color:#000;
+font-size:14px;
+font-weight:600;
+}
+
+.article-image{
+width:100%;
+border-radius:15px;
+margin:20px 0;
+}
+
+.article-title{
+font-size:32px;
+margin-bottom:20px;
+color:#000;
+}
+
+.article-text{
+color:#000;
+line-height:1.7;
+margin-bottom:15px;
+}
+
+/* SIDEBAR */
+
+.article-sidebar{
+display:flex;
+flex-direction:column;
+gap:20px;
+}
+
+.article-sidebar h3{
+color:#000;
+}
+
+/* RELATED CARDS */
+
+.related-card{
+background:white;
+padding:15px;
+border-radius:12px;
+box-shadow:0 4px 10px rgba(0,0,0,0.05);
+color:#000;
+}
+
+.related-card p{
+color:#000;
+margin-bottom:5px;
+}
+
+.related-card span{
+color:#000;
+font-size:13px;
+}
+
+/* VIEW MORE BUTTON */
+
+.view-more{
+padding:10px;
+border:none;
+border-radius:10px;
+background:#e8ecf6;
+cursor:pointer;
+color:#000;
+}
+
+/* NEWSLETTER */
+
+.newsletter{
+background:white;
+padding:20px;
+border-radius:15px;
+color:#000;
+}
+
+.newsletter h4{
+color:#000;
+}
+
+.newsletter p{
+color:#000;
+}
+
+.newsletter input{
+width:100%;
+padding:10px;
+margin:10px 0;
+border-radius:10px;
+border:1px solid #ddd;
+background:#111;
+color:white;
+}
+
+.newsletter input::placeholder{
+color:white;
+}
+
+.newsletter button{
+width:100%;
+padding:10px;
+border:none;
+border-radius:10px;
+background:var(--primary);
+color:white;
+cursor:pointer;
+}

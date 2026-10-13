@@ -1,0 +1,27 @@
+.layout {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    background: var(--bg-page);
+    overflow-x: hidden;
+}
+
+.main-content {
+    flex: 1;
+    padding: 36px 32px;
+    background: var(--bg-page);
+    min-height: 100vh;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .layout {
+        flex-direction: column;
+    }
+
+    .main-content {
+        padding: 20px 16px;
+    }
+}
