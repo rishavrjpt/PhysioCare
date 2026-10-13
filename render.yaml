@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: physiocare-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start # runs "node server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Required (server exits without these two)
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+      # URLs (set in the dashboard, no trailing slash)
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+
+      # Email OTP via EmailJS
+      - key: EMAILJS_SERVICE_ID
+        sync: false
+      - key: EMAILJS_TEMPLATE_ID
+        sync: false
+      - key: EMAILJS_PUBLIC_KEY
+        sync: false
+      - key: EMAILJS_PRIVATE_KEY
+        sync: false
+
+      # Google login (optional)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # Cyan AI assistant (optional)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CHAT_MODEL
+        sync: false
+
+      # PORT is injected by Render automatically; do not set it.
