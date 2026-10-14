@@ -1,4 +1,5 @@
 import pg from "pg";
+import { isProduction } from "./env.js";
 
 // numeric (rating, fees) and int8 (counts) come back as strings by default.
 pg.types.setTypeParser(1700, (v) => parseFloat(v));
@@ -54,7 +55,7 @@ export const connectDB = async () => {
     console.log("Postgres connected (Supabase)");
   } catch (error) {
     console.error("Postgres connection failed:", safeMessage(error));
-    if (process.env.NODE_ENV === "production") {
+    if (isProduction()) {
       console.error("[Postgres] Exiting. Check DATABASE_URL.");
       process.exit(1);
     }

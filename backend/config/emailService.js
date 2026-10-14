@@ -1,6 +1,7 @@
 // EmailJS REST API — called from the backend with a private access token.
 // Docs: https://www.emailjs.com/docs/rest-api/send/
 // In the EmailJS dashboard: Account → Security → enable "Allow EmailJS API for non-browser applications".
+import { isProduction } from "./env.js";
 
 export const isEmailConfigured = () =>
   Boolean(
@@ -17,6 +18,10 @@ export const isEmailConfigured = () =>
  */
 export const sendOtpEmail = async (toEmail, toName, otp) => {
   if (!isEmailConfigured()) {
+    // Production must never print an OTP: fail so the caller returns a delivery error instead.
+    if (isProduction()) {
+      throw new Error("EmailJS is not configured on this server");
+    }
     // Local development without email: print the OTP prominently
     console.log("\n========================================================");
     console.log(`🔑 [DEV OTP] Code for ${toEmail}: >>> ${otp} <<<`);
@@ -44,7 +49,7 @@ export const sendOtpEmail = async (toEmail, toName, otp) => {
     console.log(`OTP email sent to ${toEmail}`);
     return true;
   } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
+    if (!isProduction()) {
       console.log("\n========================================================");
       console.log(`🔑 [DEV OTP FALLBACK] Code for ${toEmail}: >>> ${otp} <<<`);
       console.log(`(EmailJS attempt failed: ${err.message})`);

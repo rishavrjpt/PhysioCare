@@ -3,6 +3,7 @@ import { useState } from "react";
 import "../style/patientLogin.css";
 import { API_BASE_URL, GOOGLE_AUTH_ENABLED } from "../config";
 
+import { describeRequestError } from "../utils/apiError";
 import physio from "../assets/patient.jpg"; // Using existing asset
 
 function PatientLogin() {
@@ -51,7 +52,7 @@ function PatientLogin() {
 
     } catch (err) {
       console.error(err);
-      setError("Server error");
+      setError(describeRequestError(err));
     }
   };
 
