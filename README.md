@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Vite-7.3-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 7" />
   <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Express-5.0-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express 5" />
-  <img src="https://img.shields.io/badge/MongoDB-Atlas_%26_Local-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Supabase-Postgres_%26_Storage-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
   <img src="https://img.shields.io/badge/Google_Gemini-Streaming_AI-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini AI" />
   <img src="https://img.shields.io/badge/EmailJS-OTP_Verification-F05A28?style=for-the-badge&logo=gmail&logoColor=white" alt="EmailJS" />
 </p>
@@ -37,7 +37,7 @@
 - **🤖 PhysioCare AI Recovery Assistant**: Real-time Server-Sent Events (SSE) streaming chatbot powered by Google Gemini (`gemini-flash-lite-latest` & `gemini-3.1-flash-lite`). Configured with emergency triage safety guardrails and strict domain-scoping exclusively to physiotherapy, exercise mechanics, ergonomics, and mobility.
 - **📄 Clinical A4 Session Reports**: Auto-generated clinical letterheads with clinic verification stamps, physician signature lines, clinical Rx boxes, and print-optimized CSS for PDF export.
 - **🔐 Secure Authentication Pipeline**: Email OTP verification with 60-second cooldown via EmailJS REST API, JWT-based role isolation (`patient`, `doctor`, `admin`), bcrypt password hashing, and optional Google OAuth 2.0.
-- **⚡ High-Performance Architecture**: MongoDB compound indexing, `.lean()` query projections, gzip compression with SSE bypass, and in-memory multi-tab synchronized state (`BroadcastChannel`).
+- **⚡ High-Performance Architecture**: Postgres indexes (including a partial unique index that prevents double-booking), parameterized SQL queries, gzip compression with SSE bypass, and in-memory multi-tab synchronized state (`BroadcastChannel`).
 - **📱 Responsive & Resilient**: Built with Tailwind CSS, custom Calm Recovery design tokens, and optimistic UI updates with automatic rollbacks on network interruptions.
 
 ---
@@ -61,10 +61,10 @@ graph TD
     end
 
     subgraph Services["External & Database Services"]
-        I[(MongoDB Database)]
+        I[(Supabase Postgres)]
         J[Google Gemini AI API]
         K[EmailJS Gmail Service]
-        L[Local Multer Storage]
+        L[Supabase Storage]
     end
 
     A --> E
@@ -105,7 +105,7 @@ graph TD
 |---|---|
 | **Frontend UI** | React 19, Vite 7, React Router 7, Tailwind CSS 4, Lucide / React Icons |
 | **Backend API** | Node.js (v18+), Express 5, Multer, Compression, Express Rate Limit |
-| **Database & ODM** | MongoDB (v6+), Mongoose 9 (Optimized with Compound Indexes & Lean Queries) |
+| **Database & Storage** | Supabase Postgres (`pg`, Session pooler, Row Level Security) and Supabase Storage (public `videos` and `images` buckets) |
 | **AI / LLM Integration** | Google Gemini (`gemini-flash-lite-latest`, `gemini-3.1-flash-lite`) via REST SSE |
 | **Notification Engine** | EmailJS REST API (Direct server-side dispatch with private access token) |
 | **Security & Auth** | JSON Web Tokens (JWT), bcryptjs, Secure HttpOnly headers, CORS whitelisting |
@@ -118,16 +118,17 @@ graph TD
 PhysioCare/
 ├── backend/
 │   ├── config/
-│   │   ├── db.js                 # Resilient MongoDB pool + auto-fallback
+│   │   ├── pg.js                 # Postgres pool (Supabase Session pooler)
+│   │   ├── storage.js            # Supabase Storage uploads / deletes
 │   │   ├── emailService.js       # EmailJS REST API dispatch
 │   │   ├── googleAuthConfig.js   # Passport Google OAuth strategy
-│   │   └── paths.js              # Media upload path resolvers
+│   │   └── paths.js              # Legacy local /uploads path resolvers
 │   ├── controllers/              # REST & SSE stream business logic
 │   ├── middleware/
 │   │   └── authMiddleware.js     # JWT guard, role-based access & validation
-│   ├── models/                   # Mongoose schemas (User, Appointment, Report, etc.)
+│   ├── repos/                    # Data-access helpers (users)
 │   ├── routes/                   # Modular Express routers
-│   ├── uploads/                  # Uploaded patient media & article covers
+│   ├── uploads/                  # Legacy local uploads (new files go to Supabase Storage)
 │   ├── .env.example              # Sample environment template
 │   └── server.js                 # Server entrypoint with SSE compression bypass
 ├── frontend/
@@ -152,7 +153,7 @@ PhysioCare/
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher
 - **npm**: v9.0.0 or higher
-- **MongoDB**: Active local instance (`mongodb://127.0.0.1:27017/physiocare`) or a MongoDB Atlas cluster URI.
+- **Supabase**: a project with the schema applied (`supabase/migrations/*.sql`, run in the SQL Editor) and the Storage buckets created (`node --env-file=.env ../supabase/create-buckets.mjs` from `backend/`).
 
 ### 1. Clone & Install Dependencies
 ```bash
@@ -172,7 +173,10 @@ cp backend/.env.example backend/.env
 Fill in the following values:
 ```env
 PORT=8080
-MONGO_URI=mongodb://127.0.0.1:27017/physiocare
+# Supabase: Session pooler connection string + project URL + service role key (backend only)
+DATABASE_URL=postgresql://postgres.<project-ref>:<PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 JWT_SECRET=your_super_secret_jwt_key_here
 FRONTEND_URL=http://localhost:5173
 
