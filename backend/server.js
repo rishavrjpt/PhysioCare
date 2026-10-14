@@ -4,6 +4,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import multer from "multer";
 import { connectDB } from "./config/pg.js";
+import { corsOrigin } from "./config/env.js";
 import { UPLOADS_DIR } from "./config/paths.js";
 import authRoutes from "./routes/authRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
@@ -16,6 +17,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 import passport from "./config/googleAuthConfig.js";
 import compression from "compression";
 import { isEmailConfigured } from "./config/emailService.js";
+import { isProduction, validateFrontendOrigins } from "./config/env.js";
 
 // ── Fail fast on missing configuration ───────────────────────────────────────
 const missing = ["DATABASE_URL", "JWT_SECRET"].filter((k) => !process.env[k]);
@@ -23,6 +25,21 @@ if (missing.length) {
   console.error(`Missing required environment variables: ${missing.join(", ")}`);
   console.error("Copy backend/.env.example to backend/.env and fill it in.");
   process.exit(1);
+}
+
+// In production a missing/invalid FRONTEND_URL is not fatal (the API stays up for non-browser
+// clients) but it means NO browser origin is allowed, so say so loudly.
+if (isProduction()) {
+  const { valid, invalid } = validateFrontendOrigins();
+  if (valid.length === 0) {
+    console.error("[CORS] FRONTEND_URL has no valid origin: browsers will be blocked. Set it to your exact frontend origin, e.g. https://your-app.vercel.app");
+  }
+  if (invalid.length) {
+    console.error(`[CORS] Ignoring ${invalid.length} invalid FRONTEND_URL entr${invalid.length === 1 ? "y" : "ies"} (must be scheme://host[:port], no path, no wildcard).`);
+  }
+  console.log(`Mode: production (${valid.length} allowed frontend origin${valid.length === 1 ? "" : "s"})`);
+} else {
+  console.log("Mode: development (local origins and development OTPs enabled)");
 }
 
 connectDB();
@@ -47,25 +64,11 @@ app.use(compression({
   }
 }));
 
-// ── CORS: only allow the configured frontend(s) ─────────────────────────────
-const allowedOrigins = [
-  ...(process.env.FRONTEND_URL || "").split(","),
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-].map((o) => o.trim().replace(/\/$/, "")).filter(Boolean);
-
-// Local development only: Vite moves to 5174, 5175, ... when 5173 is busy, so accept any
-// localhost / 127.0.0.1 port. Never enabled in production.
-const isLocalDevOrigin = (origin) =>
-  process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-
-app.use(cors({
-  origin: (origin, cb) => {
-    // Allow non-browser requests (no Origin header) and allowed frontends.
-    if (!origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) return cb(null, true);
-    return cb(null, false);
-  },
-}));
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// Production (NODE_ENV=production or running on Render): only the origins listed in FRONTEND_URL.
+// Development: FRONTEND_URL plus any localhost / 127.0.0.1 port (Vite moves to 5174, 5175, ...).
+// Rules live in config/env.js so they are unit tested.
+app.use(cors({ origin: corsOrigin() }));
 
 app.use(express.json({ limit: "10mb" }));
 

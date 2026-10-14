@@ -4,6 +4,7 @@ import { UNIQUE_VIOLATION, withTransaction } from "../config/pg.js";
 import { updateBy } from "../utils/sql.js";
 import * as users from "../repos/userRepo.js";
 import { sendOtpEmail } from "../config/emailService.js";
+import { isProduction, exposeDevOtp } from "../config/env.js";
 import { signToken } from "../middleware/authMiddleware.js";
 import { toSafeUser } from "../utils/sanitize.js";
 import { doctorHasPatient } from "../utils/relations.js";
@@ -45,7 +46,7 @@ const issueOtp = async (user) => {
   try {
     await sendOtpEmail(user.email, user.name, user.otp);
   } catch (err) {
-    if (process.env.NODE_ENV === "production") {
+    if (isProduction()) {
       console.error("EmailJS delivery failed in production:", err.message);
       const deliveryError = new Error("Email delivery failed. Please check your email address or try again in a few minutes.");
       deliveryError.status = 502;
@@ -120,7 +121,7 @@ export const signup = async (req, res) => {
       userId: user._id,
       email,
       role: user.role,
-      devOtp: process.env.NODE_ENV !== "production" ? user.otp : undefined,
+      devOtp: exposeDevOtp(user.otp),
     });
   } catch (error) {
     if (error.code === UNIQUE_VIOLATION) return res.status(400).json({ msg: "User already exists" });
@@ -175,7 +176,7 @@ export const resendOtp = async (req, res) => {
 
     res.status(200).json({
       msg: "New OTP sent to your email.",
-      devOtp: process.env.NODE_ENV !== "production" ? user.otp : undefined,
+      devOtp: exposeDevOtp(user.otp),
     });
   } catch (error) {
     serverError(res, "Resend OTP error", error);
@@ -243,7 +244,7 @@ export const login = async (req, res) => {
         needsVerification: true,
         email,
         role: user.role,
-        devOtp: process.env.NODE_ENV !== "production" ? user.otp : undefined,
+        devOtp: exposeDevOtp(user.otp),
       });
     }
 
@@ -372,7 +373,7 @@ export const forgotPassword = async (req, res) => {
 
     res.status(200).json({
       msg: "OTP sent to your email.",
-      devOtp: process.env.NODE_ENV !== "production" ? user.otp : undefined,
+      devOtp: exposeDevOtp(user.otp),
     });
   } catch (error) {
     serverError(res, "Forgot password error", error);
