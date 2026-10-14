@@ -2,7 +2,7 @@
 // Example: VITE_API_BASE_URL=https://your-backend.onrender.com/api
 // Fallback when the variable is unset: the Render backend in production builds, localhost in dev.
 const DEFAULT_API_BASE_URL = import.meta.env.PROD
-  ? "https://physiocare-api-ih0j.onrender.com/api"
+  ? "https://physiocare-20zq.onrender.com/api"
   : "http://localhost:8080/api";
 
 export const API_BASE_URL = (
