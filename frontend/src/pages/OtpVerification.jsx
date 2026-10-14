@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../config";
 
+import { describeRequestError } from "../utils/apiError";
 function OtpVerification() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -79,8 +80,8 @@ function OtpVerification() {
                 localStorage.setItem("patientToken", data.token);
                 navigate(data.profileCompleted ? "/dashboard" : "/patient/onboarding");
             }
-        } catch {
-            setError("Server error. Please try again.");
+        } catch (err) {
+            setError(describeRequestError(err));
         } finally {
             setLoading(false);
         }
@@ -111,8 +112,8 @@ function OtpVerification() {
             setExpiresIn(600);
             setOtp(["","","","","",""]);
             inputs.current[0]?.focus();
-        } catch {
-            setError("Server error.");
+        } catch (err) {
+            setError(describeRequestError(err));
         } finally {
             setResending(false);
         }

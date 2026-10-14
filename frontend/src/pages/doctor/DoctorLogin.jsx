@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../../style/doctorSignUp.css";
 import { API_BASE_URL, GOOGLE_AUTH_ENABLED } from "../../config";
 
+import { describeRequestError } from "../../utils/apiError";
 import physio from "../../assets/patient.jpg"; // Using existing asset
 
 function DoctorLogin() {
@@ -49,7 +50,7 @@ function DoctorLogin() {
       }
     } catch (err) {
       console.error(err);
-      setError("Server error");
+      setError(describeRequestError(err));
     }
   };
 

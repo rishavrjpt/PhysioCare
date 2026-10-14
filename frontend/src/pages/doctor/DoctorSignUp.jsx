@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../../style/doctorSignUp.css";
 import { API_BASE_URL } from "../../config";
 
+import { describeRequestError } from "../../utils/apiError";
 import physio from "../../assets/patient.jpg"; // Re-using existing asset for image
 
 function DoctorSignUp() {
@@ -48,7 +49,7 @@ function DoctorSignUp() {
             navigate(`/verify-otp?email=${encodeURIComponent(email)}&role=doctor${devOtpQuery}`);
         } catch (err) {
             console.error(err);
-            setError("Server error");
+            setError(describeRequestError(err));
         }
     };
 

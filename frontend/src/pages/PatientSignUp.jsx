@@ -3,6 +3,7 @@ import { useState } from "react";
 import "../style/patientSignUp.css";
 import { API_BASE_URL } from "../config";
 
+import { describeRequestError } from "../utils/apiError";
 import physio from "../assets/patient.jpg"; // Using existing asset
 
 function PatientSignUp() {
@@ -41,7 +42,7 @@ function PatientSignUp() {
             navigate(`/verify-otp?email=${encodeURIComponent(email)}&role=patient${devOtpQuery}`);
         } catch (err) {
             console.error(err);
-            setError("Server error");
+            setError(describeRequestError(err));
         }
     };
 
