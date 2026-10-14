@@ -11,8 +11,12 @@ services:
       - key: NODE_ENV
         value: production
 
-      # Required (server exits without these two)
-      - key: MONGO_URI
+      # Required (server exits without DATABASE_URL and JWT_SECRET)
+      - key: DATABASE_URL # Supabase Session pooler connection string
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY # backend only - never expose to the frontend
         sync: false
       - key: JWT_SECRET
         sync: false

@@ -9,7 +9,7 @@ This file explains what you are receiving, how to run it, what was tested, and w
 
 ## 1. What you are getting
 
-A full-stack MERN application (React + Vite frontend, Express + MongoDB backend).
+A full-stack MERN application (React + Vite frontend, Express backend, Supabase Postgres + Storage).
 Features: patient and physiotherapist portals, email-OTP signup, appointments,
 rehabilitation programs, exercise videos, articles, and the optional "Cyan AI" assistant.
 See `README.md` for features, structure and the API reference.
@@ -21,7 +21,7 @@ committed. You must create your own keys (section 4).
 
 ## 2. Run it locally
 
-Requirements: Node.js 18+, npm, and a MongoDB database (Atlas free tier or local).
+Requirements: Node.js 18+, npm, and a Supabase project (free tier works).
 
 ```bash
 npm run install:all                   # installs root, backend and frontend deps
@@ -48,7 +48,9 @@ Useful commands:
 ### `backend/.env`
 | Variable | Required | Notes |
 |---|---|---|
-| `MONGO_URI` | ✅ | Atlas string; keep `/physiocare` as the database name |
+| `DATABASE_URL` | ✅ | Supabase **Session pooler** connection string (Dashboard → Connect) |
+| `SUPABASE_URL` | ✅ | `https://<project-ref>.supabase.co` (used for Storage) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Backend only. Bypasses Row Level Security, never put it in the frontend |
 | `JWT_SECRET` | ✅ | Long random string (generate command below) |
 | `PORT` | | Default `8080`. Render sets it automatically. |
 | `FRONTEND_URL` | ✅ in prod | Exact frontend origin(s), comma-separated, no trailing slash. Used for CORS. |
@@ -72,8 +74,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ⚠️ `VITE_*` values are baked into the public JavaScript bundle. **Never put a secret there.**
 
 ### Behaviour worth knowing
-- In `NODE_ENV=production` the backend **exits** if it cannot reach MongoDB (no silent fallback).
-- In development, a failed Atlas connection falls back to `mongodb://127.0.0.1:27017/physiocare`.
+- In `NODE_ENV=production` the backend **exits** if it cannot reach Postgres. In development it
+  logs the failure and keeps running (database requests will then return 500).
 - In development, OTPs are also returned in API responses (`devOtp`) and printed in the
   terminal when EmailJS is not configured. This is disabled when `NODE_ENV=production`.
 
@@ -81,17 +83,18 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 ## 4. Set up your own services
 
-### MongoDB Atlas
-1. https://cloud.mongodb.com → create a project and a free **M0** cluster.
-2. **Security → Database Access → Add New Database User**: password authentication, a long
-   random password, role **Read and write to any database** (or `readWrite` on `physiocare`). Avoid *Atlas Admin*.
-3. **Security → Network Access → Add IP Address**:
-   - Local work: **Add Current IP Address**.
-   - Render: Atlas free tier cannot restrict to Render's changing IPs, so you will
-     need `0.0.0.0/0` ("Allow access from anywhere"). This is safe only with a strong
-     database password. Upgrade to a paid Render plan with static outbound IPs to restrict further.
-4. **Database → Connect → Drivers** → copy the string, put the password in, add `/physiocare`
-   before `?`. URL-encode special characters in the password.
+### Supabase
+1. https://supabase.com → create a project. Note the database password.
+2. **SQL Editor**: paste and run `supabase/migrations/20261014000000_init_physiocare.sql`
+   (creates all tables, enums, indexes, `updated_at` triggers and enables Row Level Security with no
+   policies; the backend uses the service role / postgres connection, which bypasses RLS).
+3. **Project Settings → API**: copy the project URL (`SUPABASE_URL`) and the `service_role` key
+   (`SUPABASE_SERVICE_ROLE_KEY`). **Connect → Session pooler**: copy the connection string
+   (`DATABASE_URL`) and URL-encode special characters in the password.
+4. Create the Storage buckets: from `backend/`, run `node --env-file=.env ../supabase/create-buckets.mjs`
+   (creates public `videos` and `images` buckets).
+5. The free tier limits uploads to 50 MB, which is why video uploads are capped at 50 MB.
+6. Free projects pause after about a week of inactivity - restore from the dashboard if connections time out.
 
 ### EmailJS
 1. https://dashboard.emailjs.com → **Email Services → Add New Service** (e.g. Gmail) → copy the **Service ID**.
@@ -109,7 +112,7 @@ https://aistudio.google.com/app/apikey → **Create API key** → `GEMINI_API_KE
 
 ## 5. What was tested (and what was not)
 
-**Tested and passing (local MongoDB, throwaway database, EmailJS/AI disabled):**
+**Tested against the previous MongoDB version (before the Supabase migration; re-test on Supabase):**
 - Frontend lint and production build; backend syntax and import check
 - `npm audit`: 0 vulnerabilities in frontend and in backend production dependencies
 - Health endpoint, CORS allow/deny
@@ -117,12 +120,12 @@ https://aistudio.google.com/app/apikey → **Create API key** → `GEMINI_API_KE
 - Doctor onboarding and listing; appointment booking, double-booking and past-date blocks,
   confirm, complete, send report, patient review
 - Programs (enroll by code), articles, role and ownership access checks
-- Production safety: backend exits when MongoDB is unreachable
+- Production safety: backend exits when the database is unreachable
 
 **NOT tested — verify these yourself:**
 | Area | Why | How to check |
 |---|---|---|
-| **MongoDB Atlas** | Connection from the previous owner's machine failed because the IP was not in Network Access | Set up Atlas (above), start the backend, look for `MongoDB Connected` |
+| **Supabase (Postgres + Storage)** | The migration was written without a live database connection | Follow the Supabase setup above, start the backend, look for `Postgres connected (Supabase)`, then upload a video and an article cover |
 | **EmailJS delivery** | Real emails were not sent (quota and privacy) | Sign up with a real address; the OTP email should arrive |
 | **Gemini / Cyan AI** | No key was exercised | Log in as a patient and ask the assistant a question |
 | **Browser UI** | Only the API was tested, not the screens | Click through patient and doctor flows in the browser |
@@ -133,26 +136,26 @@ There is **no automated test suite** in this repository.
 
 ---
 
-## 6. Deployment summary (Render + Vercel + Atlas)
+## 6. Deployment summary (Render + Vercel + Supabase)
 
 1. **Render (backend)**: deploy via the root `render.yaml` Blueprint (Root Directory `backend`, Build `npm install`, Start `npm start`, health check `/api/health`).
-   Set `MONGO_URI`, `JWT_SECRET`, EmailJS keys, optional AI keys, `FRONTEND_URL` and `BACKEND_URL` in the Render dashboard (`NODE_ENV=production` is set by the Blueprint).
-   `MONGO_URI` format (enter the real password only in Render, URL-encoding special characters, e.g. `@` → `%40`):
-   `mongodb+srv://rishavraj2107_db_user:<NEW_PASSWORD>@cluster0.bajklbk.mongodb.net/physiocare?retryWrites=true&w=majority`
+   Set `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, EmailJS keys, optional AI keys, `FRONTEND_URL` and `BACKEND_URL` in the Render dashboard (`NODE_ENV=production` is set by the Blueprint).
+   `DATABASE_URL` format (enter the real password only in Render, URL-encoding special characters, e.g. `@` → `%40`):
+   `postgresql://postgres.<project-ref>:<PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres`
 2. **Vercel (frontend)**: Root Directory `frontend`, set `VITE_API_BASE_URL=https://<render-service>.onrender.com/api`.
 3. Put the Vercel URL into Render's `FRONTEND_URL`, redeploy, then check `/api/health`.
 
-Notes: Render's free disk is wiped on restart, so uploaded videos and team photos disappear.
+Notes: uploaded videos, covers and team photos live in Supabase Storage, so they survive Render restarts.
 Free instances sleep after inactivity (see the UptimeRobot note in `README.md`).
 
 ---
 
 ## 7. Security checklist for the new owner
 
-- [ ] Created **new** Atlas user/password, EmailJS keys, Gemini key and JWT secret (none reused from before)
+- [ ] Created **new** Supabase database password, service role key, EmailJS keys, Gemini key and JWT secret (none reused from before)
 - [ ] `backend/.env` and `frontend/.env` are not tracked by Git (`git ls-files | grep .env` shows only `*.example`)
 - [ ] `NODE_ENV=production` on the server
-- [ ] Atlas user is not *Atlas Admin*
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` exists only in backend env (never in `VITE_*` or committed files)
 - [ ] Rotated any key that was ever shown in a screenshot or chat
 - [ ] Decided on a license (none is included yet)
 

@@ -1,14 +1,16 @@
-import Appointment from "../models/Appointment.js";
-import Program from "../models/Program.js";
-import User from "../models/User.js";
+import { one } from "../config/pg.js";
 
 // True if this doctor has an appointment with the patient, or the patient is
 // enrolled in one of the doctor's programs.
 export const doctorHasPatient = async (doctorId, patientId) => {
-  const appt = await Appointment.exists({ doctorId, patientId });
-  if (appt) return true;
-  const programIds = await Program.find({ doctorId }).distinct("_id");
-  if (programIds.length === 0) return false;
-  const enrolled = await User.exists({ _id: patientId, enrolledPrograms: { $in: programIds } });
-  return Boolean(enrolled);
+  const row = await one(
+    `select (
+        exists (select 1 from appointments where doctor_id = $1 and patient_id = $2)
+        or exists (
+          select 1 from program_enrollments pe join programs p on p.id = pe.program_id
+          where p.doctor_id = $1 and pe.patient_id = $2)
+      ) as ok`,
+    [doctorId, patientId]
+  );
+  return Boolean(row?.ok);
 };

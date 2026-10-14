@@ -1,7 +1,7 @@
 import "dotenv/config";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import User from "../models/User.js";
+import * as users from "../repos/userRepo.js";
 
 
 /**
@@ -30,7 +30,7 @@ if (isGoogleConfigured) passport.use(
         // Role is carried in the OAuth `state` param (set when initiating)
         const role = req.query.state === "doctor" ? "doctor" : "patient";
 
-        let user = await User.findOne({ googleId: profile.id });
+        let user = await users.findByGoogleId(profile.id);
 
         if (user) {
           // Existing Google user — enforce role match
@@ -51,7 +51,7 @@ if (isGoogleConfigured) passport.use(
         if (!email) {
           return done(null, false, { message: "Your Google account has no email address." });
         }
-        const existingEmailUser = await User.findOne({ email });
+        const existingEmailUser = await users.findByEmail(email);
         if (existingEmailUser) {
           // Link Google account to existing email user
           const allowedRoles = role === "doctor" ? ["doctor", "admin"] : ["patient"];
@@ -66,21 +66,19 @@ if (isGoogleConfigured) passport.use(
           }
           // If the email account was never verified, someone else may have registered it
           // with a password they know. Google has proven ownership, so drop that password.
-          if (!existingEmailUser.isVerified) {
-            existingEmailUser.password = null;
-            existingEmailUser.isVerified = true;
-          }
-          existingEmailUser.googleId = profile.id;
-          existingEmailUser.authProvider = "google";
-          if (!existingEmailUser.profilePhoto && profile.photos?.[0]?.value) {
-            existingEmailUser.profilePhoto = profile.photos[0].value;
-          }
-          await existingEmailUser.save();
-          return done(null, existingEmailUser);
+          const linked = await users.updateUser(existingEmailUser._id, {
+            ...(existingEmailUser.isVerified ? {} : { password: null, isVerified: true }),
+            googleId: profile.id,
+            authProvider: "google",
+            profilePhoto: !existingEmailUser.profilePhoto && profile.photos?.[0]?.value
+              ? profile.photos[0].value
+              : undefined,
+          });
+          return done(null, linked);
         }
 
         // Create brand-new Google user
-        const newUser = await User.create({
+        const newUser = await users.createUser({
           name: profile.displayName,
           email,
           googleId: profile.id,
@@ -103,8 +101,7 @@ if (isGoogleConfigured) passport.use(
 passport.serializeUser((user, done) => done(null, user._id));
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await User.findById(id);
-    done(null, user);
+    done(null, await users.findById(id));
   } catch (err) {
     done(err, null);
   }

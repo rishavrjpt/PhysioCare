@@ -1,22 +1,15 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
-import crypto from "crypto";
 import { createMember, getAllMembers, getMemberById, deleteMember } from "../controllers/teamController.js";
-import { TEAM_DIR } from "../config/paths.js";
 import { protect, requireRole, validateObjectIds } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 const IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"];
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, TEAM_DIR), // absolute path, folder created at startup
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);
-  },
-});
+// Held in memory and uploaded to Supabase Storage by the controller.
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,

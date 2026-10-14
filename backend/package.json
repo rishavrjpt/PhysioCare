@@ -10,9 +10,10 @@
   "keywords": [],
   "author": "Rishav Raj <your-email@example.com>",
   "license": "ISC",
-  "description": "PhysioCare REST API (Express + MongoDB)",
+  "description": "PhysioCare REST API (Express + Supabase Postgres)",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
+    "@supabase/supabase-js": "^2.117.3",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.2",
     "cors": "^2.8.6",
@@ -20,13 +21,14 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.3",
     "multer": "^2.1.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "pdfkit": "^0.20.2"
+    "pdfkit": "^0.20.2",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
+    "mongodb": "^7.7.0",
     "nodemon": "^3.1.14"
   },
   "engines": {

@@ -1,33 +1,60 @@
-import mongoose from "mongoose";
-import DoctorProfile from "../models/DoctorProfile.js";
-import User from "../models/User.js";
-import PatientNote from "../models/PatientNote.js";
-import { escapeRegex, SAFE_USER_SELECT } from "../utils/sanitize.js";
+import { one, many } from "../config/pg.js";
+import { camelize } from "../utils/rows.js";
+import { isUuid } from "../utils/rows.js";
+import { updateBy } from "../utils/sql.js";
 import { doctorHasPatient } from "../utils/relations.js";
+
+// A doctor_profiles row in the old Mongoose shape: `user` is the doctor's id, or a
+// { _id, name, email } object when the caller passes the populated user.
+const profileOut = (row, user) => {
+    const { userId, ...rest } = camelize(row);
+    return { ...rest, user: user || userId };
+};
+
+const DEFAULT_PROFILE = {
+    experience: "0 Years",
+    patientsCount: "0+",
+    rating: 0,
+    fees: 0,
+    about: "",
+    specialization: "Physiotherapist",
+    bio: "",
+    licenceNumber: "",
+    hospitalName: "",
+    availableDays: [],
+    availableTimeStart: "",
+    availableTimeEnd: "",
+    languages: [],
+    isAvailable: false,
+};
 
 // Fetch all doctors (with optional city filter)
 export const getAllDoctors = async (req, res) => {
     try {
         const { city } = req.query;
 
-        // Build query filter
-        const filter = { role: "doctor", isVerified: true };
+        // Substring match, case-insensitive. position() avoids LIKE wildcard escaping.
+        const params = [];
+        let cityFilter = "";
         if (city) {
-            // Escape user input: "(" or "*" in the city used to crash the query (invalid regex)
-            filter.city = { $regex: escapeRegex(String(city).trim()), $options: "i" };
+            params.push(String(city).trim().toLowerCase());
+            cityFilter = "and position($1 in lower(city)) > 0";
         }
 
-        // Find all users with role 'doctor'
-        const doctors = await User.find(filter).select("name email city phone profilePhoto").lean();
+        const doctors = camelizeRows(await many(
+            `select id, name, email, city, phone, profile_photo from users
+              where role = 'doctor' and is_verified ${cityFilter}`,
+            params
+        ));
 
-        // Fetch only these doctors' profiles and index them by user id (was O(n²) over every profile)
-        const profiles = await DoctorProfile.find({ user: { $in: doctors.map(d => d._id) } })
-            .populate("user", "name email").lean();
-        const profileByUser = new Map(profiles.filter(p => p.user).map(p => [p.user._id.toString(), p]));
+        // Fetch only these doctors' profiles and index them by user id
+        const profiles = doctors.length
+            ? await many("select * from doctor_profiles where user_id = any($1::uuid[])", [doctors.map((d) => d._id)])
+            : [];
+        const profileByUser = new Map(profiles.map((p) => [p.user_id, p]));
 
-        // Merge user info with profile info
-        const mergedDoctors = doctors.map(doc => {
-            const profile = profileByUser.get(doc._id.toString());
+        const merged = doctors.map((doc) => {
+            const row = profileByUser.get(doc._id);
             return {
                 _id: doc._id,
                 name: doc.name,
@@ -35,54 +62,40 @@ export const getAllDoctors = async (req, res) => {
                 city: doc.city || "",
                 phone: doc.phone || "",
                 profilePhoto: doc.profilePhoto || "",
-                profile: profile || null
+                profile: row ? profileOut(row, { _id: doc._id, name: doc.name, email: doc.email }) : null,
             };
         });
 
-        res.status(200).json(mergedDoctors);
+        res.status(200).json(merged);
     } catch (error) {
         console.error("Error fetching doctors:", error);
         res.status(500).json({ msg: "Server error" });
     }
 };
 
+const camelizeRows = (rows) => rows.map(camelize);
+
 // Fetch specific doctor details
 export const getDoctorById = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await User.findById(id).select(SAFE_USER_SELECT).lean();
+        const user = camelize(await one(
+            "select id, name, email, role, city, phone, profile_photo from users where id = $1", [id]
+        ));
         if (!user || user.role !== "doctor") {
             return res.status(404).json({ msg: "Doctor not found" });
         }
 
-        let profile = await DoctorProfile.findOne({ user: id }).populate("user", "name email").lean();
-
-        if (!profile) {
-            // If profile doesn't exist, return empty profile structure
-            profile = {
-                user: { _id: user._id, name: user.name, email: user.email },
-                experience: "0 Years",
-                patientsCount: "0+",
-                rating: 0,
-                fees: 0,
-                about: "",
-                specialization: "Physiotherapist",
-                bio: "",
-                licenceNumber: "",
-                hospitalName: "",
-                availableDays: [],
-                availableTimeStart: "",
-                availableTimeEnd: "",
-                languages: [],
-                isAvailable: false
-            };
-        }
+        const row = await one("select * from doctor_profiles where user_id = $1", [id]);
+        const userInfo = { _id: user._id, name: user.name, email: user.email };
+        // If profile doesn't exist, return empty profile structure
+        const profile = row ? profileOut(row, userInfo) : { user: userInfo, ...DEFAULT_PROFILE };
 
         res.status(200).json({
-            ...profile.toObject ? profile.toObject() : profile,
+            ...profile,
             city: user.city || "",
             phone: user.phone || "",
-            profilePhoto: user.profilePhoto || ""
+            profilePhoto: user.profilePhoto || "",
         });
     } catch (error) {
         console.error("Error fetching doctor profile:", error);
@@ -100,32 +113,26 @@ export const updateDoctorProfile = async (req, res) => {
             availableDays, availableTimeStart, availableTimeEnd, languages
         } = req.body;
 
-        let profile = await DoctorProfile.findOne({ user: id });
+        const text = (v) => (v === undefined ? undefined : String(v ?? ""));
+        const list = (v) => (v === undefined ? undefined : Array.isArray(v) ? v.map(String) : []);
 
-        if (profile) {
-            if (experience !== undefined) profile.experience = experience;
-            if (patientsCount !== undefined) profile.patientsCount = patientsCount;
-            if (fees !== undefined && fees !== "") profile.fees = Number(fees) || 0;
-            if (about !== undefined) profile.about = about;
-            if (specialization !== undefined && specialization !== "") profile.specialization = specialization;
-            if (bio !== undefined) profile.bio = bio;
-            if (licenceNumber !== undefined) profile.licenceNumber = licenceNumber;
-            if (hospitalName !== undefined) profile.hospitalName = hospitalName;
-            if (availableDays !== undefined) profile.availableDays = availableDays;
-            if (availableTimeStart !== undefined) profile.availableTimeStart = availableTimeStart;
-            if (availableTimeEnd !== undefined) profile.availableTimeEnd = availableTimeEnd;
-            if (languages !== undefined) profile.languages = languages;
-            await profile.save();
-        } else {
-            profile = await DoctorProfile.create({
-                user: id,
-                experience, patientsCount, fees: Number(fees) || 0, about, specialization,
-                bio, licenceNumber, hospitalName,
-                availableDays, availableTimeStart, availableTimeEnd, languages
-            });
-        }
+        await one("insert into doctor_profiles (user_id) values ($1) on conflict (user_id) do nothing returning id", [id]);
+        const row = await updateBy("doctor_profiles", "user_id", id, {
+            experience: text(experience),
+            patientsCount: text(patientsCount),
+            fees: fees !== undefined && fees !== "" ? Number(fees) || 0 : undefined,
+            about: text(about),
+            specialization: specialization !== undefined && specialization !== "" ? String(specialization) : undefined,
+            bio: text(bio),
+            licenceNumber: text(licenceNumber),
+            hospitalName: text(hospitalName),
+            availableDays: list(availableDays),
+            availableTimeStart: text(availableTimeStart),
+            availableTimeEnd: text(availableTimeEnd),
+            languages: list(languages),
+        });
 
-        res.status(200).json({ msg: "Profile updated successfully", profile });
+        res.status(200).json({ msg: "Profile updated successfully", profile: profileOut(row) });
     } catch (error) {
         console.error("Error updating doctor profile:", error);
         res.status(500).json({ msg: "Server error" });
@@ -136,16 +143,13 @@ export const updateDoctorProfile = async (req, res) => {
 export const toggleAvailability = async (req, res) => {
     try {
         const { id } = req.params;
-        let profile = await DoctorProfile.findOne({ user: id });
-
-        if (!profile) {
-            profile = await DoctorProfile.create({ user: id, isAvailable: true });
-        } else {
-            profile.isAvailable = !profile.isAvailable;
-            await profile.save();
-        }
-
-        res.status(200).json({ msg: "Availability updated", isAvailable: profile.isAvailable });
+        const row = await one(
+            `insert into doctor_profiles (user_id, is_available) values ($1, true)
+             on conflict (user_id) do update set is_available = not doctor_profiles.is_available
+             returning is_available`,
+            [id]
+        );
+        res.status(200).json({ msg: "Availability updated", isAvailable: row.is_available });
     } catch (error) {
         console.error("Error toggling availability:", error);
         res.status(500).json({ msg: "Server error" });
@@ -157,8 +161,8 @@ export const getPatientNote = async (req, res) => {
     try {
         const { patientId } = req.params;
         const doctorId = req.user.id; // never trust the doctorId in the URL
-        const note = await PatientNote.findOne({ doctorId, patientId }).lean();
-        res.status(200).json(note || { note: "" });
+        const note = await one("select * from patient_notes where doctor_id = $1 and patient_id = $2", [doctorId, patientId]);
+        res.status(200).json(note ? camelize(note) : { note: "" });
     } catch (error) {
         console.error("Error fetching patient note:", error);
         res.status(500).json({ msg: "Server error" });
@@ -171,22 +175,22 @@ export const savePatientNote = async (req, res) => {
         const { patientId, note } = req.body;
         const doctorId = req.user.id;
 
-        if (!patientId || !mongoose.isValidObjectId(patientId)) {
+        if (!patientId || !isUuid(patientId)) {
             return res.status(400).json({ msg: "A valid patientId is required." });
         }
         if (!(await doctorHasPatient(doctorId, patientId))) {
             return res.status(403).json({ msg: "This patient is not under your care." });
         }
 
-        // Upsert in one atomic step (avoids the duplicate-key race of find-then-create).
-        // An empty note is allowed so a doctor can clear it (schema used to reject "").
-        const patientNote = await PatientNote.findOneAndUpdate(
-            { doctorId, patientId },
-            { note: typeof note === "string" ? note : "" },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
+        // Atomic upsert. An empty note is allowed so a doctor can clear it.
+        const row = await one(
+            `insert into patient_notes (doctor_id, patient_id, note) values ($1, $2, $3)
+             on conflict (doctor_id, patient_id) do update set note = excluded.note
+             returning *`,
+            [doctorId, patientId, typeof note === "string" ? note : ""]
         );
 
-        res.status(200).json({ msg: "Note saved successfully", patientNote });
+        res.status(200).json({ msg: "Note saved successfully", patientNote: camelize(row) });
     } catch (error) {
         console.error("Error saving patient note:", error);
         res.status(500).json({ msg: "Server error" });
