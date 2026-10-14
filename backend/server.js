@@ -54,10 +54,15 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
 ].map((o) => o.trim().replace(/\/$/, "")).filter(Boolean);
 
+// Local development only: Vite moves to 5174, 5175, ... when 5173 is busy, so accept any
+// localhost / 127.0.0.1 port. Never enabled in production.
+const isLocalDevOrigin = (origin) =>
+  process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 app.use(cors({
   origin: (origin, cb) => {
     // Allow non-browser requests (no Origin header) and allowed frontends.
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) return cb(null, true);
     return cb(null, false);
   },
 }));
@@ -127,7 +132,18 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+// Express 5 passes listen errors (e.g. EADDRINUSE) to this callback. Without checking it the
+// server used to print "Server running" and then silently exit.
+app.listen(PORT, (err) => {
+  if (err) {
+    if (err.code === "EADDRINUSE") {
+      console.error(`Port ${PORT} is already in use - another backend is probably still running.`);
+      console.error(`Stop it (macOS: lsof -nP -iTCP:${PORT} -sTCP:LISTEN, then kill <PID>) or set a different PORT.`);
+    } else {
+      console.error("Server failed to start:", err.message);
+    }
+    process.exit(1);
+  }
   console.log(`Server running on port ${PORT}`);
   if (isEmailConfigured()) {
     console.log("Email: EmailJS configured");
