@@ -1,8 +1,8 @@
 import crypto from "crypto";
-import Program from "../models/Program.js";
-import User from "../models/User.js";
-import Video from "../models/Video.js";
-import { deleteUploadedFile } from "../config/paths.js";
+import { one, many, withTransaction, UNIQUE_VIOLATION } from "../config/pg.js";
+import { camelize } from "../utils/rows.js";
+import { insertRow } from "../utils/sql.js";
+import { deleteStoredFile } from "../config/storage.js";
 import { doctorHasPatient } from "../utils/relations.js";
 
 // Random 6-character code, e.g. "A3F9B2"
@@ -15,12 +15,12 @@ const serverError = (res, label, error) => {
 
 // Loads a program and checks the logged-in doctor owns it.
 const loadOwnProgram = async (req, res) => {
-    const program = await Program.findById(req.params.id);
+    const program = camelize(await one("select * from programs where id = $1", [req.params.id]));
     if (!program) {
         res.status(404).json({ msg: "Program not found" });
         return null;
     }
-    if (req.user.role !== "admin" && program.doctorId.toString() !== req.user.id) {
+    if (req.user.role !== "admin" && program.doctorId !== req.user.id) {
         res.status(403).json({ msg: "This is not your program." });
         return null;
     }
@@ -32,19 +32,19 @@ export const createProgram = async (req, res) => {
         const { title, description, specialty } = req.body;
         if (!title?.trim()) return res.status(400).json({ msg: "Program title is required." });
 
-        // Retry on the (very rare) duplicate code instead of looping on findOne
+        // Retry on the (very rare) duplicate code
         for (let attempt = 0; attempt < 5; attempt++) {
             try {
-                const program = await Program.create({
+                const row = await insertRow("programs", {
                     doctorId: req.user.id, // always the logged-in doctor
                     title: title.trim(),
-                    description,
+                    description: description ?? null,
                     specialty: specialty || "General",
                     programCode: generateProgramCode(),
                 });
-                return res.status(201).json(program);
+                return res.status(201).json(camelize(row));
             } catch (err) {
-                if (err.code !== 11000) throw err;
+                if (err.code !== UNIQUE_VIOLATION) throw err;
             }
         }
         res.status(500).json({ msg: "Could not generate a unique code. Please try again." });
@@ -55,11 +55,12 @@ export const createProgram = async (req, res) => {
 
 export const getDoctorPrograms = async (req, res) => {
     try {
-        const programs = await Program.find({ doctorId: req.params.doctorId })
-            .select("doctorId title description programCode specialty createdAt")
-            .sort({ createdAt: -1 })
-            .lean();
-        res.status(200).json(programs);
+        const rows = await many(
+            `select id, doctor_id, title, description, program_code, specialty, created_at
+               from programs where doctor_id = $1 order by created_at desc`,
+            [req.params.doctorId]
+        );
+        res.status(200).json(rows.map(camelize));
     } catch (error) {
         serverError(res, "Error getting programs", error);
     }
@@ -70,17 +71,19 @@ export const enrollInProgram = async (req, res) => {
         const programCode = String(req.body.programCode || "").trim().toUpperCase(); // codes are case-insensitive for users
         if (!programCode) return res.status(400).json({ msg: "Please enter a program code." });
 
-        const program = await Program.findOne({ programCode });
+        const program = camelize(await one("select * from programs where program_code = $1", [programCode]));
         if (!program) return res.status(404).json({ msg: "Program not found. Invalid code." });
 
-        const patient = await User.findById(req.user.id).select("enrolledPrograms");
+        const patient = await one("select id from users where id = $1", [req.user.id]);
         if (!patient) return res.status(404).json({ msg: "Patient not found." });
-        if (patient.enrolledPrograms.some((p) => p.equals(program._id))) {
-            return res.status(400).json({ msg: "You are already enrolled in this program." });
-        }
 
-        // $addToSet is atomic, so a double-click on "Enroll" still can't add the program twice
-        await User.updateOne({ _id: req.user.id }, { $addToSet: { enrolledPrograms: program._id } });
+        // ON CONFLICT DO NOTHING is atomic, so a double-click on "Enroll" can't add it twice
+        const inserted = await one(
+            `insert into program_enrollments (patient_id, program_id) values ($1, $2)
+             on conflict do nothing returning program_id`,
+            [req.user.id, program._id]
+        );
+        if (!inserted) return res.status(400).json({ msg: "You are already enrolled in this program." });
 
         res.status(200).json({ msg: "Successfully enrolled!", program });
     } catch (error) {
@@ -92,18 +95,13 @@ export const deleteProgram = async (req, res) => {
     try {
         const program = await loadOwnProgram(req, res);
         if (!program) return;
-        const id = program._id;
 
-        // 1. Delete all associated video files and records
-        const videos = await Video.find({ programId: id });
-        videos.forEach((vid) => deleteUploadedFile(vid.url));
-        await Video.deleteMany({ programId: id });
+        // Remember the video files so they can be removed from storage after the rows are gone
+        const videos = await many("select url, thumbnail from videos where program_id = $1", [program._id]);
 
-        // 2. Remove program from enrolled users
-        await User.updateMany({ enrolledPrograms: id }, { $pull: { enrolledPrograms: id } });
-
-        // 3. Delete the program
-        await Program.findByIdAndDelete(id);
+        // Videos and enrollments are removed by ON DELETE CASCADE
+        await withTransaction((db) => db.query("delete from programs where id = $1", [program._id]));
+        await Promise.all(videos.flatMap((vid) => [deleteStoredFile(vid.url), deleteStoredFile(vid.thumbnail)]));
 
         res.status(200).json({ msg: "Program and associated videos successfully deleted." });
     } catch (error) {
@@ -122,12 +120,15 @@ export const getPatientPrograms = async (req, res) => {
             (me.role === "doctor" && (await doctorHasPatient(me.id, patientId)));
         if (!allowed) return res.status(403).json({ msg: "You cannot view this patient's programs." });
 
-        const patient = await User.findById(patientId)
-            .populate("enrolledPrograms")
-            .select("enrolledPrograms")
-            .lean();
+        const patient = await one("select id from users where id = $1", [patientId]);
         if (!patient) return res.status(404).json({ msg: "Patient not found." });
-        res.status(200).json(patient.enrolledPrograms.filter(Boolean));
+
+        const rows = await many(
+            `select p.* from program_enrollments pe join programs p on p.id = pe.program_id
+              where pe.patient_id = $1 order by pe.enrolled_at`,
+            [patientId]
+        );
+        res.status(200).json(rows.map(camelize));
     } catch (error) {
         serverError(res, "Error getting patient programs", error);
     }
@@ -137,12 +138,13 @@ export const getProgramPatients = async (req, res) => {
     try {
         const program = await loadOwnProgram(req, res);
         if (!program) return;
-        const patients = await User.find({ enrolledPrograms: program._id })
-            .select("name email role")
-            .lean();
-        res.status(200).json(patients);
+        const rows = await many(
+            `select u.id, u.name, u.email, u.role from program_enrollments pe
+               join users u on u.id = pe.patient_id where pe.program_id = $1`,
+            [program._id]
+        );
+        res.status(200).json(rows.map(camelize));
     } catch (error) {
         serverError(res, "Error getting program patients", error);
     }
 };
-

@@ -184,6 +184,7 @@ function DoctorPrograms() {
         if (!newVideo.title) return alert("Title is required");
         if (uploadType === 'link' && !newVideo.url) return alert("URL is required");
         if (uploadType === 'file' && !newVideo.file) return alert("Please select a video file");
+        if (uploadType === 'file' && newVideo.file.size > 50 * 1024 * 1024) return alert("Video must be under 50 MB");
         
         setIsUploading(true);
         const token = localStorage.getItem("doctorToken");

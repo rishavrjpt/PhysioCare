@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import multer from "multer";
-import connectDB from "./config/db.js";
+import { connectDB } from "./config/pg.js";
 import { UPLOADS_DIR } from "./config/paths.js";
 import authRoutes from "./routes/authRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
@@ -18,7 +18,7 @@ import compression from "compression";
 import { isEmailConfigured } from "./config/emailService.js";
 
 // ── Fail fast on missing configuration ───────────────────────────────────────
-const missing = ["MONGO_URI", "JWT_SECRET"].filter((k) => !process.env[k]);
+const missing = ["DATABASE_URL", "JWT_SECRET"].filter((k) => !process.env[k]);
 if (missing.length) {
   console.error(`Missing required environment variables: ${missing.join(", ")}`);
   console.error("Copy backend/.env.example to backend/.env and fill it in.");

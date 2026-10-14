@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
-import User from "../models/User.js";
+import { one } from "../config/pg.js";
+import { isUuid } from "../utils/rows.js";
 
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
@@ -9,7 +9,7 @@ const getJwtSecret = () => {
 };
 
 export const signToken = (user) =>
-  jwt.sign({ id: user._id.toString(), role: user.role }, getJwtSecret(), { expiresIn: "1d" });
+  jwt.sign({ id: String(user._id ?? user.id), role: user.role }, getJwtSecret(), { expiresIn: "1d" });
 
 const readBearer = (req) => {
   const header = req.headers.authorization || "";
@@ -18,10 +18,10 @@ const readBearer = (req) => {
 
 const loadUserFromToken = async (token) => {
   const decoded = jwt.verify(token, getJwtSecret());
-  if (!mongoose.isValidObjectId(decoded.id)) return null;
-  const user = await User.findById(decoded.id).select("_id role name email").lean();
+  if (!isUuid(decoded.id)) return null; // old MongoDB-era tokens are rejected, user logs in again
+  const user = await one("select id, role, name, email from users where id = $1", [decoded.id]);
   if (!user) return null;
-  return { id: user._id.toString(), role: user.role, name: user.name, email: user.email };
+  return { id: user.id, role: user.role, name: user.name, email: user.email };
 };
 
 // Requires a valid JWT. Sets req.user = { id, role, name, email }.
@@ -65,10 +65,10 @@ export const requireSelf = (param = "id") => (req, res, next) => {
   return res.status(403).json({ msg: "You can only access your own data." });
 };
 
-// Rejects malformed Mongo IDs in route params with 400 instead of a 500 CastError.
+// Rejects malformed IDs (must be UUIDs) in route params with 400 instead of a 500.
 export const validateObjectIds = (req, res, next) => {
   for (const [key, value] of Object.entries(req.params || {})) {
-    if (/id$/i.test(key) && !mongoose.isValidObjectId(value)) {
+    if (/id$/i.test(key) && !isUuid(value)) {
       return res.status(400).json({ msg: `Invalid ${key}.` });
     }
   }
